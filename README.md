@@ -7,7 +7,7 @@ In this project we will implement a Model Predictive Control to drive the car ar
 
 ---
 
-#### Video of the car driving around the simulator track available here () 
+#### Video of the car driving around the simulator track available here (https://youtu.be/rXklOh1W6dI) 
 
 - The yellow is a polynomial fitted to waypoints and the green line represents the x and y coordinates of the MPC trajectory.
 - For the simulator I used 640 x 480 screen resolution, with a graphic quality of fastest.
