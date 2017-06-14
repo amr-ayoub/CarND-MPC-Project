@@ -3,6 +3,86 @@ Self-Driving Car Engineer Nanodegree Program
 
 ---
 
+In this project we will implement a Model Predictive Control to drive the car around the track. Additionally, there's a 100 millisecond latency between actuations commands on top of the connection latency.
+
+---
+
+#### Video of the car driving around the simulator track available here () 
+
+- The yellow is a polynomial fitted to waypoints and the green line represents the x and y coordinates of the MPC trajectory.
+- For the simulator I used 640 x 480 screen resolution, with a graphic quality of fastest.
+- My code is built based on the SDC ND class lessons code and quizzes.
+
+#### I learned how to tune the right weights for the different parts of the cost function, dealing with latency between actuations commands, and better understanding of MPC from the great discussions on the SDC ND community on Slack/Forums and students articles on medium.com. 
+
+## Vehicle Kinematic Model
+
+Kinematic models are simplifications of dynamic models that ignore tire forces, gravity, and mass. This simplification reduces the accuracy of the models, but it also makes them more tractable. We want to derive a model that captures how the state evolves over time, and how we can provide an input to change it. 
+
+
+### The state variables
+The simulator gives us the below state variables of the car and a series of waypoints with respect to the arbitrary global map coordinate system which we can use to fit a polynomial used to estimate the curve of the road ahead.
+#### px
+The current location of the vehicle in the x-axis of an arbitrary global map coordinate system.
+
+#### py
+The current location of the vehicle in the y-axis of an arbitrary global map coordinate system.
+
+#### psi
+The current orientation of the vehicle
+
+#### v
+The current velocity of the vehicle
+
+
+### The Actuators
+Actuator inputs allow us to control the vehicle state. Most cars have three actuators: the steering wheel, the throttle pedal and the brake pedal. For simplicity we'll consider the throttle and brake pedals as a singular actuator.
+
+#### delta
+Steering value or turn angle of the vehicle. The angle is between -25 and 25 degrees.
+
+#### a
+Throttle/Brake value with negative values signifying braking and positive values signifying acceleration where a can take value between and including -1 and 1.
+
+### Errors
+A controller actuates the vehicle to follow the reference trajectory, within a set of design requirements. One important requirement is to minimize the error between the reference trajectory and the vehicle’s actual path. You can minimize this error by predicting the vehicle’s actual path and then adjusting the actuators to minimize the difference between the prediction and the reference trajectory. That's how to use the kinematic model to predict the vehicle’s future state.
+
+#### Cross Track Error cte
+The difference between our desired position and actual position. 
+
+#### Orientation Error epsi
+The difference between our desired orientation and actual orientation. Can be computed using an arctan to the derivative of the fitted polynomial function at point px = 0 to get the angle to which we should be heading.
+
+
+#### The model we’ve developed:
+px(t+1) = px(t) + v(t) * cos(psi(t)) * dt
+
+py(t+1) = py(t) + v(t) * sin(psi(t)) * dt
+
+psi(t+1) = psi(t) + v(t) / Lf * (-delta) * dt
+
+v(t+1) = v(t) + a(t) * dt
+
+cte(t+1) = cte(t) - v(t) * sin(epsi(t)) * dt
+
+epsi(t+1) = epsi(t) +  v(t) / Lf * (-delta) * dt
+
+where Lf measures the distance between the front of the vehicle and its center of gravity. The larger the vehicle , the slower the turn rate.
+
+cte = f(px) - py
+
+epsi = psi - atan(f_derv(px))
+
+where f is the fitted polynomial function, f_derv is the derivative of f.
+
+
+####  N & dt values
+
+
+
+
+
+
 ## Dependencies
 
 * cmake >= 3.5
