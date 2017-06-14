@@ -76,11 +76,32 @@ epsi = psi - atan(f_derv(px))
 where f is the fitted polynomial function, f_derv is the derivative of f.
 
 
-####  N & dt values
+###  N & dt values
+The prediction horizon is the duration over which future predictions are made and it is the product of two variables, N and dt. N is the number of timesteps in the horizon. dt is how much time elapses between actuations. These are hyperparameters we need to tune for each model predictive controller we build.
+
+Too small N will not enable us to look ahead enough to plan well our path especially curves, and too big N will cause us to look ahead too much than we actually need with the cost of calculating too much before the feedback. I choose N=10 after many trails and errors.
+
+For dt, I choose dt = 0.1 sec as it's the latency between actuation commands which helps with the way I deal with the latency in implementing my MPC.
+
+
+### Cost function
+The objective is to minimize the cross track error cte and the orientation error epsi, so our cost should be a function of how far these errors are from 0. 
+
+We will also penalize the vehicle for not maintaining the reference velocity to avoid it from halting in the middle of the reference trajectory.
+
+We also include to the cost the control inputs, this will help us to penalize the magnitude of the control input as well as the change-rate of the control inputs. The main purpose of that is to avoid erratic driving by jerking the steering wheel or consecutive hard acceleration/braking.
+
+The different weights for the cost function are tuned by trial-and-error and with the help of discussions over the SDCND Slack/forums community.
+
+
+### Polynomial Fitting and MPC Preprocessing
 
 
 
 
+
+
+### Model Predictive Control with Latency
 
 
 ## Dependencies
