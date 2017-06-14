@@ -95,14 +95,58 @@ The different weights for the cost function are tuned by trial-and-error and wit
 
 
 ### Polynomial Fitting and MPC Preprocessing
+The simulator gives us the state variables of the car and a series of waypoints with respect to the arbitrary global map coordinate system which we need to transform to the vehicle coordinates system..I used a 3rd order polynomial as an estimate of the current road curve ahead. 
 
-
-
-
+The errors calculated: For the current cte error equals the fitted polynomial function at px = 0. For the current orientation error epsi equals the arctan(f_derv) where f_derv is the derivative of the fitted polynomial.
 
 
 ### Model Predictive Control with Latency
+Model Predictive Control (MPC) uses an optimizer to find the control inputs that minimize the cost function.
 
+The MPC algorithm:
+
+Setup:
+
+    1- Define the length of the trajectory, N, and duration of each timestep, dt.
+    2- Define vehicle dynamics and actuator limitations along with other constraints.
+    3- Define the cost function.
+
+Loop:
+
+    1- We pass the current state as the initial state to the model predictive controller.
+    2- We call the optimization solver. Given the initial state, the solver will return the vector of control inputs that minimizes the cost function. The solver we'll use is called Ipopt.
+    3- We apply the first control input to the vehicle.
+    4- Back to 1.
+
+
+#### To deal with the 0.1 sec latency:-  
+
+I choose the dt = 0.1 sec and instead of using the given state, we first compute the state with the delay using our kinematic model before feeding it to the solving object.
+
+In the code:
+```
+          ////////////////////////////////////////////////////////////////////////////
+          /////*** Getting the state considering the latency****//////////////////////
+      
+          
+          const double current_px = 0.0 + v * dt;
+          const double current_py = 0.0; // Car is going straight ahead the x-axis
+          const double current_psi = 0.0 + v * (-delta) / Lf * dt;
+          const double current_v = v + a * dt;
+          const double current_cte = cte + v * sin(epsi) * dt;
+          const double current_epsi = epsi + v * (-delta) / Lf * dt;
+          
+          Eigen::VectorXd current_state(6);
+          current_state << current_px, current_py, current_psi, current_v, current_cte, current_epsi;
+          
+          //////////////////////////////////////////////////////////////////////////////
+          ////*** Getting next predicted states and actuators using MPC***//////////////
+          mpc.Solve(current_state, K);
+          steer_value = mpc.steering;
+          throttle_value = mpc.throttle;
+          
+
+```
 
 ## Dependencies
 
