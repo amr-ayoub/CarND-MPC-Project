@@ -9,6 +9,8 @@
 #include "MPC.h"
 #include "json.hpp"
 
+using namespace std;
+
 // for convenience
 using json = nlohmann::json;
 
@@ -87,10 +89,13 @@ int main() {
           // j[1] is the data JSON object
           vector<double> ptsx = j[1]["ptsx"];
           vector<double> ptsy = j[1]["ptsy"];
-          double px = j[1]["x"];
-          double py = j[1]["y"];
-          double psi = j[1]["psi"];
-          double v = j[1]["speed"];
+          const double px = j[1]["x"];
+          const double py = j[1]["y"];
+          const double psi = j[1]["psi"];
+          const double v = j[1]["speed"];
+          const double delta = j[1]["steering_angle"];
+          const double a = j[1]["throttle"];
+          
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -100,6 +105,61 @@ int main() {
           */
           double steer_value;
           double throttle_value;
+          
+          /////////////////////////////////////////////////////////////////////////
+          //////*** Convert waypoints from global space to vehicle space***////////
+          
+          int waypoints = ptsx.size(); //number of waypoints
+          Eigen::VectorXd waypoints_xs(waypoints);
+          Eigen::VectorXd waypoints_ys(waypoints);
+          
+          for(int point = 0; point < waypoints; ++point)
+          {
+            const double dx = ptsx[point] - px;
+            const double dy = ptsy[point] - py;
+            
+            waypoints_xs[point] = dx * cos(-psi) - dy * sin(-psi);
+            waypoints_ys[point] = dy * cos(-psi) + dx * sin(-psi);
+          }
+          
+          
+          ///////////////////////////////////////////////////////////////////////////
+          //////*** Fit a 3rd order polynomial***////////////////////////////////////////////////
+          
+           auto K = polyfit(waypoints_xs, waypoints_ys, 3);
+          
+          /////////////////////////////////////////////////////////////////////////////
+          ///////*** Calculate current error estimate of cte and epsi
+          
+          // current cte is at px=0.0 of the fitted 3rd order polynomial:-
+          // f = K[3](px*px*px) + K[2](px*px) + K[1](px) + K[0]
+          const double cte = K[0];
+          
+          // current epsi error equals the tangent at px = 0.0
+          // epsi = arctan(f'),  f' is the derivative of the 3rd order polynomial
+          // f' = 3.0 * K[3]*(px*px) + 2.0 * K[2]*(px) + K[1]
+          const double epsi = -atan(K[1]);
+
+          ////////////////////////////////////////////////////////////////////////////
+          /////*** Getting the state considering the latency****//////////////////////
+      
+          
+          const double current_px = 0.0 + v * dt;
+          const double current_py = 0.0; // Car is going straight ahead the x-axis
+          const double current_psi = 0.0 + v * (-delta) / Lf * dt;
+          const double current_v = v + a * dt;
+          const double current_cte = cte + v * sin(epsi) * dt;
+          const double current_epsi = epsi + v * (-delta) / Lf * dt;
+          
+          Eigen::VectorXd current_state(6);
+          current_state << current_px, current_py, current_psi, current_v, current_cte, current_epsi;
+          
+          //////////////////////////////////////////////////////////////////////////////
+          ////*** Getting next predicted states and actuators using MPC***//////////////
+          mpc.Solve(current_state, K);
+          steer_value = mpc.steering;
+          throttle_value = mpc.throttle;
+          
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
@@ -114,13 +174,24 @@ int main() {
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
 
-          msgJson["mpc_x"] = mpc_x_vals;
-          msgJson["mpc_y"] = mpc_y_vals;
+          msgJson["mpc_x"] = mpc.next_xs;
+          msgJson["mpc_y"] = mpc.next_ys;
 
           //Display the waypoints/reference line
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
+          vector<double> next_x_vals(N);
+          vector<double> next_y_vals(N);
 
+          for (int i = 0; i < N; ++i)
+          {
+            const double dx = 5.0 * i;
+            const double dy = K[3] * dx * dx * dx + K[2] * dx * dx + K[1] * dx + K[0];
+            
+            next_x_vals[i] = dx;
+            next_y_vals[i] = dy;
+            
+            
+          }
+ 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
 
